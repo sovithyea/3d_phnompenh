@@ -123,6 +123,22 @@ export function buildCityTiles(buildings: BuildingRec[]): CityTile[] {
     } else {
       low = new THREE.BufferGeometry(); // tile of only small buildings — nothing far away
     }
+    // ExtrudeGeometry/BoxGeometry are indexed by default, so mergeGeometries()
+    // produces an indexed result here. THREE.BufferGeometry.setIndex() (called
+    // internally with a plain array) auto-promotes to Uint32Array once the
+    // index exceeds 65,535 (arrayNeedsUint32 check), so this doesn't silently
+    // wrap around on this three.js version — confirmed by reading
+    // node_modules/three/src/core/BufferGeometry.js and
+    // examples/jsm/utils/BufferGeometryUtils.js. Logged as a heads-up only:
+    // a 65k+ vertex tile means Uint32 indices (2x the index memory) and is
+    // worth knowing about even though it renders correctly.
+    for (const [label, g] of [['detail', detail], ['low', low]] as const) {
+      if (g.attributes.position.count > 65536) {
+        console.warn(
+          `tile ${key} ${label}: ${g.attributes.position.count} vertices (>65536, using 32-bit indices)`,
+        );
+      }
+    }
     detail.computeBoundingSphere();
     low.computeBoundingSphere();
     tiles.push({ key, center: [tcx, tcz], detail, low });

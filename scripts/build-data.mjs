@@ -11,7 +11,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import osmtogeojson from 'osmtogeojson';
 import { bboxClip } from '@turf/bbox-clip';
 import { BBOX, LEVEL_HEIGHT, DEFAULT_LEVELS, ORIGIN, project } from './config.mjs';
-import { LANDMARKS } from './landmarks.config.mjs';
+import { LANDMARKS, ROAD_SUPPRESS_ZONES } from './landmarks.config.mjs';
 
 const CACHE_DIR = new URL('./cache/', import.meta.url);
 const OUT_DIR = new URL('../public/data/', import.meta.url);
@@ -62,8 +62,44 @@ function inZone([lng, lat], [minLng, minLat, maxLng, maxLat]) {
   return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
 }
 
+// Shoelace signed area in [lng,lat] space. Positive = CCW.
+function ringArea(ring) {
+  let area = 0;
+  for (let i = 0; i < ring.length - 1; i++) {
+    const [x1, y1] = ring[i];
+    const [x2, y2] = ring[i + 1];
+    area += x1 * y2 - x2 * y1;
+  }
+  return area;
+}
+
+// OSM way node order isn't a guaranteed winding convention — some ways are
+// drawn CCW, some CW. projectRing()/ringsToShape() need a consistent
+// convention (outer CCW, holes CW) or ~half the extrusions get inverted
+// normals and render inside-out under single-sided materials.
+const ringStats = { closed: 0, reversed: 0 };
+
+function closeRing(ring) {
+  const [fx, fy] = ring[0];
+  const [lx, ly] = ring[ring.length - 1];
+  if (fx === lx && fy === ly) return ring;
+  ringStats.closed++;
+  return [...ring, [fx, fy]];
+}
+
+function normalizeRings(rings) {
+  return rings.map((ring, i) => {
+    const closed = closeRing(ring);
+    const area = ringArea(closed);
+    const isOuter = i === 0;
+    const needsReverse = isOuter ? area < 0 : area > 0;
+    if (needsReverse) ringStats.reversed++;
+    return needsReverse ? [...closed].reverse() : closed;
+  });
+}
+
 function projectRing(ring) {
-  // GeoJSON rings repeat the first point at the end — drop it, extrusion closes itself.
+  // Rings are closed (first point repeated at the end) — drop it, extrusion closes itself.
   const flat = [];
   const n = ring.length - 1;
   for (let i = 0; i < n; i++) {
@@ -94,8 +130,9 @@ async function buildBuildings() {
     const h = parseHeight(tags);
     const k = classify(tags, h);
 
-    for (const rings of polygons) {
-      if (rings[0].length < 4) continue; // degenerate
+    for (const rawRings of polygons) {
+      if (rawRings[0].length < 4) continue; // degenerate
+      const rings = normalizeRings(rawRings);
       const centroid = ringCentroid(rings[0]);
       const zone = LANDMARKS.find((l) => l.zone && inZone(centroid, l.zone));
       if (zone) { suppressed[zone.id]++; continue; }
@@ -113,6 +150,7 @@ async function buildBuildings() {
   const byKind = buildings.reduce((acc, b) => ((acc[b.k] = (acc[b.k] ?? 0) + 1), acc), {});
   console.log(`  kinds: ${KINDS.map((k, i) => `${k}=${byKind[i] ?? 0}`).join(' ')}`);
   for (const [id, n] of Object.entries(suppressed)) console.log(`  suppressed[${id}]: ${n}`);
+  console.log(`  rings closed: ${ringStats.closed}, rings reversed to fix winding: ${ringStats.reversed}`);
 }
 
 // ---- roads ----
@@ -120,8 +158,12 @@ async function buildRoads() {
   const raw = await readCache('roads');
   const MAJOR = new Set(['motorway', 'trunk', 'primary', 'secondary']);
   const roads = [];
+  const roadSuppressed = Object.fromEntries(ROAD_SUPPRESS_ZONES.map((z) => [z.id, 0]));
   for (const el of raw.elements) {
     if (el.type !== 'way' || !el.geometry) continue;
+    const mid = el.geometry[Math.floor(el.geometry.length / 2)];
+    const zone = ROAD_SUPPRESS_ZONES.find((z) => inZone([mid.lon, mid.lat], z.zone));
+    if (zone) { roadSuppressed[zone.id]++; continue; }
     const c = MAJOR.has(el.tags?.highway) ? 1 : 0;
     const p = [];
     for (const pt of el.geometry) {
@@ -132,6 +174,7 @@ async function buildRoads() {
   }
   await writeFile(new URL('roads.json', OUT_DIR), JSON.stringify({ roads }));
   console.log(`roads: ${roads.length} polylines`);
+  for (const [id, n] of Object.entries(roadSuppressed)) console.log(`  road-suppressed[${id}]: ${n}`);
 }
 
 // ---- water ----
@@ -150,8 +193,9 @@ async function buildWater() {
       clipped.geometry.type === 'Polygon' ? [clipped.geometry.coordinates]
       : clipped.geometry.type === 'MultiPolygon' ? clipped.geometry.coordinates
       : [];
-    for (const rings of polygons) {
-      if (!rings.length || rings[0].length < 4) continue;
+    for (const rawRings of polygons) {
+      if (!rawRings.length || rawRings[0].length < 4) continue;
+      const rings = normalizeRings(rawRings);
       polys.push(rings.map(projectRing));
     }
   }

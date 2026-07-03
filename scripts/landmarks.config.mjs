@@ -26,5 +26,15 @@ export const LANDMARKS = [
   { id: 'naga3-site', zone: [104.9322, 11.5524, 104.934, 11.5542] },
   { id: 'the-peak', zone: [104.9376, 11.5518, 104.939, 11.5542] },
   { id: 'morgan-enmaison', zone: [104.9352, 11.5924, 104.9376, 11.5938] },
-  // bridge + riverfront promenade have no building footprints to suppress
+  // riverfront promenade has no building footprints to suppress
+];
+
+// Roads whose real-world way is replaced by a hand-modeled landmark (the
+// Chroy Changvar deck arcs up to 11m — the flat OSM road line at y=0.2
+// would otherwise render underneath it as a duplicate, reading as a
+// misaligned/phantom road across the water). Zone covers both spans
+// (way/91370410, 104.91848,11.58600 -> 104.92476,11.58839) plus the ~20m
+// twin-span offset and approach curves.
+export const ROAD_SUPPRESS_ZONES = [
+  { id: 'chroy-changvar-bridge', zone: [104.9175, 11.585, 104.9255, 11.5895] },
 ];
