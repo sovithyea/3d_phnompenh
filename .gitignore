@@ -3,3 +3,4 @@ dist
 scripts/cache/
 *.local
 .DS_Store
+*.tsbuildinfo
