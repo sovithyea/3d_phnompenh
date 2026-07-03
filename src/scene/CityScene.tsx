@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { loadCityData, type CityData } from '../lib/loadCityData';
 import Ground from './Ground';
 import CityTiles from './CityTiles';
+import Landmarks from './landmarks';
 
 export default function CityScene() {
   const [data, setData] = useState<CityData | null>(null);
@@ -22,6 +23,7 @@ export default function CityScene() {
         <>
           <Ground data={data} />
           <CityTiles data={data} />
+          <Landmarks />
         </>
       )}
 
