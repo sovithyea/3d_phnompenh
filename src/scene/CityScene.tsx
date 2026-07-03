@@ -3,7 +3,7 @@ import { CameraControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { loadCityData, type CityData } from '../lib/loadCityData';
 import Ground from './Ground';
-import FlatCity from './FlatCity';
+import CityTiles from './CityTiles';
 
 export default function CityScene() {
   const [data, setData] = useState<CityData | null>(null);
@@ -21,7 +21,7 @@ export default function CityScene() {
       {data && (
         <>
           <Ground data={data} />
-          <FlatCity data={data} />
+          <CityTiles data={data} />
         </>
       )}
 
@@ -31,6 +31,8 @@ export default function CityScene() {
         maxPolarAngle={Math.PI * 0.47}
         makeDefault
         ref={(controls) => {
+          // debug/scripting handle (e.g. headless verification shots)
+          (window as unknown as { __controls?: unknown }).__controls = controls;
           controls?.setBoundary(
             new THREE.Box3(
               new THREE.Vector3(-6000, 0, -6000),

@@ -30,14 +30,17 @@ export default function Ground({ data }: { data: CityData }) {
 
   return (
     <>
-      <mesh rotation-x={-Math.PI / 2} position-y={-0.5}>
+      {/* y offsets sized for depth precision at km distances (see camera near) */}
+      <mesh rotation-x={-Math.PI / 2} position-y={-1}>
         <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
         <meshLambertMaterial color="#c8c0ae" />
       </mesh>
-      <mesh geometry={waterGeometry} position-y={-0.2}>
-        <meshLambertMaterial color="#4a6f8a" />
+      {/* unlit: overlapping OSM water polys (water + riverbank) are coplanar —
+          identical unlit color makes their mutual z-fighting invisible */}
+      <mesh geometry={waterGeometry} position-y={-0.3}>
+        <meshBasicMaterial color="#4a6f8a" />
       </mesh>
-      <lineSegments geometry={roadGeometry} position-y={0.1}>
+      <lineSegments geometry={roadGeometry} position-y={0.2}>
         <lineBasicMaterial color="#8a8478" />
       </lineSegments>
     </>
