@@ -10,6 +10,10 @@ export default function App() {
       <Canvas
         camera={{ position: [2500, 1800, 3000], near: 10, far: 20000, fov: 50 }}
         onPointerMissed={() => useAppStore.getState().setSelectedLandmark(null)}
+        onCreated={(state) => {
+          // debug/perf handle for scripted verification
+          (window as unknown as { __gl?: unknown }).__gl = state.gl;
+        }}
       >
         <CityScene />
       </Canvas>
