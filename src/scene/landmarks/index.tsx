@@ -1,5 +1,7 @@
 import type { ComponentType } from 'react';
+import { Html } from '@react-three/drei';
 import { lngLatToLocal } from '../../lib/projection';
+import { useAppStore } from '../../state/useAppStore';
 import VattanacTower from './VattanacTower';
 import ThePeak from './ThePeak';
 import MorganEnmaison from './MorganEnmaison';
@@ -108,6 +110,9 @@ export const LANDMARK_DEFS: LandmarkDef[] = [
 ];
 
 export default function Landmarks() {
+  const selected = useAppStore((s) => s.selectedLandmark);
+  const setSelected = useAppStore((s) => s.setSelectedLandmark);
+
   return (
     <>
       {LANDMARK_DEFS.map((l) => {
@@ -117,8 +122,26 @@ export default function Landmarks() {
             key={l.id}
             position={l.absolute ? [0, 0, 0] : [x, 0, z]}
             userData={{ landmarkId: l.id }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected(l.id);
+            }}
+            onPointerOver={() => (document.body.style.cursor = 'pointer')}
+            onPointerOut={() => (document.body.style.cursor = 'auto')}
           >
             <l.Component />
+            {selected === l.id && (
+              <Html
+                position={l.absolute ? [x, l.lookHeight + 50, z] : [0, l.lookHeight + 50, 0]}
+                center
+                style={{ pointerEvents: 'none' }}
+              >
+                <div className="landmark-label">
+                  <strong>{l.title}</strong>
+                  <span>{l.blurb}</span>
+                </div>
+              </Html>
+            )}
           </group>
         );
       })}

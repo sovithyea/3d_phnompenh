@@ -8,10 +8,10 @@ import { MAT } from './materials';
 // Tonle Sap west bank with flag poles and trees. Absolute coordinates.
 const BANK: [number, number][] = [
   [104.93168, 11.5766],
-  [104.93208, 11.5728],
-  [104.9325, 11.569],
-  [104.9326, 11.5655],
-  [104.9318, 11.5615],
+  [104.932, 11.5728],
+  [104.93235, 11.569],
+  [104.9323, 11.5655],
+  [104.9313, 11.5612],
 ];
 const STRIP_W = 28;
 

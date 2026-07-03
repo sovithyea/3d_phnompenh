@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { CityData } from '../lib/loadCityData';
 import { ringsToShape } from '../lib/shapes';
+import { groundMaterial, waterMaterial, roadMaterial } from './groundMaterials';
 
 const GROUND_SIZE = 14000;
 
@@ -31,18 +32,13 @@ export default function Ground({ data }: { data: CityData }) {
   return (
     <>
       {/* y offsets sized for depth precision at km distances (see camera near) */}
-      <mesh rotation-x={-Math.PI / 2} position-y={-1}>
+      <mesh rotation-x={-Math.PI / 2} position-y={-1} material={groundMaterial}>
         <planeGeometry args={[GROUND_SIZE, GROUND_SIZE]} />
-        <meshLambertMaterial color="#c8c0ae" />
       </mesh>
       {/* unlit: overlapping OSM water polys (water + riverbank) are coplanar —
           identical unlit color makes their mutual z-fighting invisible */}
-      <mesh geometry={waterGeometry} position-y={-0.3}>
-        <meshBasicMaterial color="#4a6f8a" />
-      </mesh>
-      <lineSegments geometry={roadGeometry} position-y={0.2}>
-        <lineBasicMaterial color="#8a8478" />
-      </lineSegments>
+      <mesh geometry={waterGeometry} position-y={-0.3} material={waterMaterial} />
+      <lineSegments geometry={roadGeometry} position-y={0.2} material={roadMaterial} />
     </>
   );
 }
